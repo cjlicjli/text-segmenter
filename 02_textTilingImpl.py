@@ -10,6 +10,7 @@ from collections import Counter
 from nltk.corpus import stopwords
 from nltk.stem import SnowballStemmer
 from nltk.stem import WordNetLemmatizer
+from sentence_transformers import SentenceTransformer, util
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -117,6 +118,22 @@ def score_vocabulary_introduction(sentence_list):
     return lexical_gap_scores
 
 
+def score_embedding_similarity(sentence_list, model):
+    embedding_gap_scores = []
+
+    for i in range(len(sentence_list) - 1):
+        sent1 = sentence_list[i]
+        sent2 = sentence_list[i + 1]
+        sent1_embedding = model.encode(sent1)
+        sent2_embedding = model.encode(sent2)
+
+        similarity = float(util.dot_score(sent1_embedding, sent2_embedding))
+        embedding_gap_scores.append(similarity)
+        print("Similarity:", similarity)
+
+    return embedding_gap_scores
+
+
 def boundary_identification(lexical_gap_scores):
     depth_scores = []
 
@@ -183,6 +200,9 @@ if __name__ == "__main__":
         "-sc", "--score", required=True, help="scoring type, `block` or `vocab`"
     )
     parser.add_argument(
+        "-m", "--model", required=False, help="embedding_model", default="multi-qa-MiniLM-L6-cos-v1"
+    )
+    parser.add_argument(
         "--smooth", required=False, help="smoothing toggle", action="store_true"
     )
     parser.add_argument(
@@ -207,6 +227,10 @@ if __name__ == "__main__":
     elif args.score == "vocab":
         logger.info("scoring with vocab introduction method")
         gap_scores = score_vocabulary_introduction(sentences)
+    elif args.score == "embedding":
+        logger.info("scoring with embedding similarity method")
+        multi_model = SentenceTransformer(args.model)
+        gap_scores = score_embedding_similarity(sentences, multi_model)
 
     gap_scores = boundary_identification(gap_scores)
 

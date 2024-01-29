@@ -6,6 +6,7 @@ name = "pypi"
 [packages]
 nltk = "*"
 black = "*"
+sentence_transformers = "*"
 
 [dev-packages]
 
