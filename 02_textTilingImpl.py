@@ -82,7 +82,7 @@ def score_block_comparison(sentence_list, block_size=2):
         elif i < len(sentence_list) - block_size: #if it's near the middle of the list, 2 equal blocks
             # print(i, file=sys.stderr)
             block1 = []
-            for j in range(0, block_size-1):
+            for j in range(0, block_size):
                 block1.append(sentence_list[i-j])
 
 
@@ -93,7 +93,7 @@ def score_block_comparison(sentence_list, block_size=2):
         else: #if its near the end of the list, block 2 will be shortened
             # print(i, file=sys.stderr)
             block1 = []
-            for j in range(0, block_size - 1):
+            for j in range(0, block_size):
                 block1.append(sentence_list[i - j])
 
             block2 = []
@@ -102,7 +102,7 @@ def score_block_comparison(sentence_list, block_size=2):
 
         block1_counter = Counter()
         block2_counter = Counter()
-
+        # print(block1, block2, file=sys.stderr)
         #add our words from block1 into block1_counter, words from block2 into block2_counter
         for sentence in block1:
             block1_counter += Counter(sentence.split())
@@ -123,9 +123,10 @@ def score_block_comparison(sentence_list, block_size=2):
         inner_product = sum(block1_counter[key] * block2_counter[key] for key in block1_counter.keys())
 
         #denominator is the square root of multiplying the two normalizations together
+        #had to add 1 or else the stopword removal can break the lexical overlap if there are no words in a sentence
         block1_norm = sum([x ** 2 for x in block1_counter.values()])
         block2_norm = sum([x ** 2 for x in block2_counter.values()])
-        
+        # print(block1_norm, block2_norm, file=sys.stderr)
         denominator = math.sqrt(block1_norm * block2_norm)
 
         lexical_gap_scores.append(inner_product / denominator)
@@ -208,6 +209,53 @@ def score_embedding_similarity(sentence_list, model):
 
     return embedding_gap_scores
 
+def score_embedding_similarity_blocked(sentence_list, model, block_size = 2):
+    print("BLOCK SIZE", block_size, file=sys.stderr)
+    embedding_gap_scores = []
+
+    for i in range(len(sentence_list) - 1): #this loop will hit on every possible sentence gap as a boundary, while shifting the blocks
+
+        if i < (block_size - 1): #if it's near the beginning of the list, where block 1 will be shortened
+            # print(i,file=sys.stderr)
+            block1 = []
+            for j in range(0,i+1):
+                block1.append(sentence_list[j])
+            block2 = []
+            for k in range(1, block_size+1):
+                block2.append(sentence_list[i+k])
+
+        elif i < len(sentence_list) - block_size: #if it's near the middle of the list, 2 equal blocks
+            # print(i, file=sys.stderr)
+            block1 = []
+            for j in range(0, block_size):
+                block1.append(sentence_list[i-j])
+
+
+            block2 = []
+            for k in range(1, block_size+1):
+                block2.append(sentence_list[i + k])
+
+        else: #if its near the end of the list, block 2 will be shortened
+            # print(i, file=sys.stderr)
+            block1 = []
+            for j in range(0, block_size):
+                block1.append(sentence_list[i - j])
+
+            block2 = []
+            for sent in sentence_list[i+1:]:
+                block2.append(sent)
+
+        #concatenate blocks into string to feed to model
+        block1 = " ".join(block1)
+        block2 = " ".join(block2)
+        sent1_embedding = model.encode(block1)
+        sent2_embedding = model.encode(block2)
+
+        similarity = float(util.dot_score(sent1_embedding, sent2_embedding))
+        embedding_gap_scores.append(similarity)
+        print("Similarity:", similarity)
+
+    return embedding_gap_scores
 
 def boundary_identification(lexical_gap_scores):
     depth_scores = []
@@ -250,7 +298,7 @@ def paragraph_numbers(depth_scores):
     standard_dev = statistics.stdev(depth_scores)
 
     for score in depth_scores:
-        if score > (average - (standard_dev / 2)):
+        if score > (average + (standard_dev / 2)):
             paragraph_starts.append(1)
         else:
             paragraph_starts.append(0)
@@ -307,7 +355,7 @@ if __name__ == "__main__":
     elif args.score == "embedding":
         logger.info("scoring with embedding similarity method")
         multi_model = SentenceTransformer(args.model)
-        gap_scores = score_embedding_similarity(sentences, multi_model)
+        gap_scores = score_embedding_similarity_blocked(sentences, multi_model, block_size = int(args.num_blocks))
 
     gap_scores = boundary_identification(gap_scores)
 
