@@ -7,21 +7,24 @@ import string
 import numpy as np
 
 from collections import Counter
-
+import nltk
+from nltk.metrics import windowdiff
 from nltk.corpus import stopwords
 from nltk.stem import SnowballStemmer
 from nltk.stem import WordNetLemmatizer
 from sentence_transformers import SentenceTransformer, util
-
+nltk.download("stopwords")
+print("okay0", file=sys.stderr)
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 formatter = logging.Formatter("%(asctime)s | %(levelname)s | %(message)s")
+print("okay1", file=sys.stderr)
 
 stdout_handler = logging.StreamHandler(sys.stdout)
 stdout_handler.setLevel(logging.DEBUG)
 stdout_handler.setFormatter(formatter)
 logger.addHandler(stdout_handler)
-
+print("okay2", file=sys.stderr)
 
 def read_csv(file_name):
     sentences = []
@@ -317,6 +320,7 @@ def translate_gaps_to_sentences(scores):
 
 
 if __name__ == "__main__":
+    print("Hello", file=sys.stderr)
     parser = argparse.ArgumentParser(description="argument parser for text tiling")
     parser.add_argument("-f", "--file", required=True, help="file to parse")
     parser.add_argument(
@@ -365,6 +369,20 @@ if __name__ == "__main__":
     paragraph_boundaries = paragraph_numbers(gap_scores)
 
     output = translate_gaps_to_sentences(paragraph_boundaries)
+    window_textbook="10001001000100010000"
+    windowdiff_score=""
+    for i in range(len(output)-1):
+        current_score = output[i]
+        next_score = output[i+1]
+        if current_score == next_score:
+            windowdiff_score += "0"
+        else:
+            windowdiff_score += "1"
+    print(window_textbook, file=sys.stderr)
+    print(windowdiff_score,file=sys.stderr)
+    print(windowdiff(window_textbook, windowdiff_score, 3))
+    
+
     print(f"OUTPUT: {output}")
     if args.print:
         for item in output:
