@@ -4,6 +4,7 @@ import math
 import sys
 import statistics
 import string
+import numpy as np
 
 from collections import Counter
 
@@ -60,29 +61,103 @@ def preprocess(sentence_list):
     return sentences
 
 
-def score_block_comparison(sentence_list, block_size=5):
+def score_block_comparison(sentence_list, block_size=2):
     lexical_gap_scores = []
 
-    for i in range(len(sentence_list) - block_size):
-        block1 = sentence_list[i : (i + block_size)]
+    if block_size < 2:
+        block_size = 2
+        print("BLOCK SIZE must be at least 2", file=sys.stderr)
+    
+    for i in range(len(sentence_list) - 1): #this loop will hit on every possible sentence gap as a boundary, while shifting the blocks
+
+        if i < (block_size - 1): #if it's near the beginning of the list, where block 1 will be shortened
+            # print(i,file=sys.stderr)
+            block1 = []
+            for j in range(0,i+1):
+                block1.append(sentence_list[j])
+            block2 = []
+            for k in range(1, block_size+1):
+                block2.append(sentence_list[i+k])
+
+        elif i < len(sentence_list) - block_size: #if it's near the middle of the list, 2 equal blocks
+            # print(i, file=sys.stderr)
+            block1 = []
+            for j in range(0, block_size-1):
+                block1.append(sentence_list[i-j])
+
+
+            block2 = []
+            for k in range(1, block_size+1):
+                block2.append(sentence_list[i + k])
+
+        else: #if its near the end of the list, block 2 will be shortened
+            # print(i, file=sys.stderr)
+            block1 = []
+            for j in range(0, block_size - 1):
+                block1.append(sentence_list[i - j])
+
+            block2 = []
+            for sent in sentence_list[i+1:]:
+                block2.append(sent)
+
         block1_counter = Counter()
-
-        for sentence in block1:
-            block1_counter += Counter(sentence.split())
-
-        block2 = sentence_list[(i + 1) : (i + block_size + 1)]
         block2_counter = Counter()
 
+        #add our words from block1 into block1_counter, words from block2 into block2_counter
+        for sentence in block1:
+            block1_counter += Counter(sentence.split())
         for sentence in block2:
             block2_counter += Counter(sentence.split())
 
-        block1_weight = sum(block1_counter.values())
-        block2_weight = sum(block2_counter.values())
+        # make sure all the keys are in both counters
+        # we need vectors of same length to take the inner product of the counts
+        for key in block1_counter.keys():
+            if key not in block2_counter:
+                block2_counter[key] = 0
 
-        numerator = block1_weight + block2_weight
-        denominator = math.sqrt((block1_weight**2) * (block2_weight**2))
+        for key in block2_counter.keys():
+            if key not in block1_counter:
+                block1_counter[key] = 0
 
-        lexical_gap_scores.append(numerator / denominator)
+        #numerator is the dot product of the two vectors
+        inner_product = sum(block1_counter[key] * block2_counter[key] for key in block1_counter.keys())
+
+        #denominator is the square root of multiplying the two normalizations together
+        block1_norm = sum([x ** 2 for x in block1_counter.values()])
+        block2_norm = sum([x ** 2 for x in block2_counter.values()])
+        
+        denominator = math.sqrt(block1_norm * block2_norm)
+
+        lexical_gap_scores.append(inner_product / denominator)
+
+        # old code
+        # block1_weight = sum(block1_counter.values())
+        # block2_weight = sum(block2_counter.values())
+        #
+        # numerator = block1_weight + block2_weight
+        # denominator = math.sqrt((block1_weight ** 2) * (block2_weight ** 2))
+        #
+        # lexical_gap_scores.append(numerator / denominator)
+
+
+    # for i in range(len(sentence_list))
+    #
+    #
+    #     block1_counter = Counter()
+    #     block2_counter = Counter()
+    #
+    #     for sentence in block1:
+    #         block1_counter += Counter(sentence.split())
+    #     for sentence in block2:
+    #         block2_counter += Counter(sentence.split())
+    #
+    #     block1_weight = sum(block1_counter.values())
+    #     block2_weight = sum(block2_counter.values())
+    #
+    #     numerator = block1_weight + block2_weight
+    #     denominator = math.sqrt((block1_weight**2) * (block2_weight**2))
+    #
+    #     lexical_gap_scores.append(numerator / denominator)
 
     return lexical_gap_scores
 
@@ -212,6 +287,8 @@ if __name__ == "__main__":
         action="store_true",
     )
 
+    parser.add_argument("-nb", "--num_blocks", help="number of blocks for lexical overlap score", default=2)
+
     args = parser.parse_args()
     logger.info(f"Reading in file: {args.file}")
 
@@ -223,7 +300,7 @@ if __name__ == "__main__":
 
     if args.score == "block":
         logger.info("scoring with block method")
-        gap_scores = score_block_comparison(sentences)
+        gap_scores = score_block_comparison(sentences, block_size = int(args.num_blocks))
     elif args.score == "vocab":
         logger.info("scoring with vocab introduction method")
         gap_scores = score_vocabulary_introduction(sentences)
