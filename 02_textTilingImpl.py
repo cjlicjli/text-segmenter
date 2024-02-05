@@ -4,6 +4,7 @@ import math
 import sys
 import statistics
 import string
+import csv
 import numpy as np
 
 from collections import Counter
@@ -28,18 +29,23 @@ print("okay2", file=sys.stderr)
 
 def read_csv(file_name):
     sentences = []
+    labels = []
 
     with open(f"./{file_name}", "r") as f:
-        file_text = f.read()
-        file_text = file_text.strip().split("\n")
-        for sentence in file_text:
+        data = []
+        reader = csv.reader(f)
+        for line in reader:
+            data.append(line)
+        for line in data:
+            sentence, label = line
             punctuation = string.punctuation + r"""”“’—"""
             sentence_stripped = sentence.lower().translate(
                 str.maketrans("", "", punctuation)
             )
             sentences.append(sentence_stripped)
+            labels.append(label)
 
-    return sentences
+    return sentences, labels
 
 
 def preprocess(sentence_list):
@@ -322,7 +328,7 @@ def translate_gaps_to_sentences(scores):
 if __name__ == "__main__":
     print("Hello", file=sys.stderr)
     parser = argparse.ArgumentParser(description="argument parser for text tiling")
-    parser.add_argument("-f", "--file", required=True, help="file to parse")
+    parser.add_argument("-f", "--file", required=True, help="file to parse, each line: sent, label")
     parser.add_argument(
         "-sc", "--score", required=True, help="scoring type, `block` or `vocab` or `embedding`"
     )
@@ -333,7 +339,7 @@ if __name__ == "__main__":
         "--smooth", required=False, help="smoothing toggle", action="store_true"
     )
     parser.add_argument(
-        "-e", "--eval_labels", required=False, help="window diff eval on labels from file"
+        "--eval", required=False, help="windowdiff eval", action="store_true"
     )
     parser.add_argument(
         "--print",
@@ -347,7 +353,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     logger.info(f"Reading in file: {args.file}")
 
-    sentences = read_csv(args.file)
+    sentences, labels = read_csv(args.file)
     logger.info(f"File length: {len(sentences)}")
 
     sentences = preprocess(sentences)
@@ -374,28 +380,24 @@ if __name__ == "__main__":
     output = translate_gaps_to_sentences(paragraph_boundaries)
 
     # convert output to 0,1 format (1 indicates the start of a subtopic)
-    windowdiff_score="0"
+    windowdiff_tiles="1"
     for i in range(len(output)-1):
         current_score = output[i]
         next_score = output[i+1]
         if current_score == next_score:
-            windowdiff_score += "0"
+            windowdiff_tiles += "0"
         else:
-            windowdiff_score += "1"
-    #print(window_textbook, file=sys.stderr)
-    print(windowdiff_score,file=sys.stderr)
+            windowdiff_tiles += "1"
 
-    if args.eval_labels:
-        # read in eval labels from file
-        labels = read_csv(args.eval_labels)
+    print("System Tiles:",windowdiff_tiles,file=sys.stderr)
+
+    if args.eval:
         label_string = ''.join(labels)
-        print(label_string)
-        print(windowdiff(labels, windowdiff_score, 3))
+        print("Gold Tiles:", label_string)
+        print("Windowdiff Score:", windowdiff(labels, windowdiff_tiles, 3))
     
 
-    print(f"OUTPUT: {output}")
+    print(f"OUTPUT: {windowdiff_tiles}")
     if args.print:
-        for item in output:
+        for item in windowdiff_tiles:
             print(item)
-
-    # window_textbook="10001001000100010000"
