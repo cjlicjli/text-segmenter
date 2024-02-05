@@ -37,13 +37,16 @@ def read_csv(file_name):
         for line in reader:
             data.append(line)
         for line in data:
-            sentence, label = line
+            if len(line) == 2:
+                sentence, label = line
+                labels.append(label)
+            else:
+                sentence = line[0]
             punctuation = string.punctuation + r"""”“’—"""
             sentence_stripped = sentence.lower().translate(
                 str.maketrans("", "", punctuation)
             )
             sentences.append(sentence_stripped)
-            labels.append(label)
 
     return sentences, labels
 
