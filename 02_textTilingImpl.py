@@ -324,13 +324,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="argument parser for text tiling")
     parser.add_argument("-f", "--file", required=True, help="file to parse")
     parser.add_argument(
-        "-sc", "--score", required=True, help="scoring type, `block` or `vocab`"
+        "-sc", "--score", required=True, help="scoring type, `block` or `vocab` or `embedding`"
     )
     parser.add_argument(
         "-m", "--model", required=False, help="embedding_model", default="multi-qa-MiniLM-L6-cos-v1"
     )
     parser.add_argument(
         "--smooth", required=False, help="smoothing toggle", action="store_true"
+    )
+    parser.add_argument(
+        "-e", "--eval_labels", required=False, help="window diff eval on labels from file"
     )
     parser.add_argument(
         "--print",
@@ -369,8 +372,9 @@ if __name__ == "__main__":
     paragraph_boundaries = paragraph_numbers(gap_scores)
 
     output = translate_gaps_to_sentences(paragraph_boundaries)
-    window_textbook="10001001000100010000"
-    windowdiff_score=""
+
+    # convert output to 0,1 format (1 indicates the start of a subtopic)
+    windowdiff_score="0"
     for i in range(len(output)-1):
         current_score = output[i]
         next_score = output[i+1]
@@ -378,12 +382,20 @@ if __name__ == "__main__":
             windowdiff_score += "0"
         else:
             windowdiff_score += "1"
-    print(window_textbook, file=sys.stderr)
+    #print(window_textbook, file=sys.stderr)
     print(windowdiff_score,file=sys.stderr)
-    print(windowdiff(window_textbook, windowdiff_score, 3))
+
+    if args.eval_labels:
+        # read in eval labels from file
+        labels = read_csv(args.eval_labels)
+        label_string = ''.join(labels)
+        print(label_string)
+        print(windowdiff(labels, windowdiff_score, 3))
     
 
     print(f"OUTPUT: {output}")
     if args.print:
         for item in output:
             print(item)
+
+    # window_textbook="10001001000100010000"
