@@ -6,6 +6,7 @@ import statistics
 import string
 import csv
 import numpy as np
+from pathlib import Path
 
 from collections import Counter
 import nltk
@@ -13,7 +14,7 @@ from nltk.metrics import windowdiff
 from nltk.corpus import stopwords
 from nltk.stem import SnowballStemmer
 from nltk.stem import WordNetLemmatizer
-from sentence_transformers import SentenceTransformer, util
+# from sentence_transformers import SentenceTransformer, util
 nltk.download("stopwords")
 print("okay0", file=sys.stderr)
 logger = logging.getLogger()
@@ -28,6 +29,7 @@ logger.addHandler(stdout_handler)
 print("okay2", file=sys.stderr)
 
 def read_csv(file_name):
+    print(file_name)
     sentences = []
     labels = []
 
@@ -331,7 +333,7 @@ def translate_gaps_to_sentences(scores):
 if __name__ == "__main__":
     print("Hello", file=sys.stderr)
     parser = argparse.ArgumentParser(description="argument parser for text tiling")
-    parser.add_argument("-f", "--file", required=True, help="file to parse, each line: sent, label")
+    parser.add_argument("-f", "--file", required=False, help="file to parse, each line: sent, label")
     parser.add_argument(
         "-sc", "--score", required=True, help="scoring type, `block` or `vocab` or `embedding`"
     )
@@ -350,13 +352,24 @@ if __name__ == "__main__":
         help="print output one line at a time for copy paste",
         action="store_true",
     )
+    parser.add_argument("--folder")
 
     parser.add_argument("-nb", "--num_blocks", help="number of blocks for lexical overlap score", default=2)
 
     args = parser.parse_args()
-    logger.info(f"Reading in file: {args.file}")
+    if args.file:
+        logger.info(f"Reading in file: {args.file}")
+    else:
+        logger.info(f"Folder: {args.folder}")
 
-    sentences, labels = read_csv(args.file)
+    if args.folder:
+        pathlist = Path(args.folder).rglob('*.csv')
+        for path in pathlist:
+            path_in_str = str(path)
+            sentences, labels = read_csv(path_in_str)
+    if args.file:
+        sentences, labels = read_csv(args.file)
+
     logger.info(f"File length: {len(sentences)}")
 
     sentences = preprocess(sentences)
