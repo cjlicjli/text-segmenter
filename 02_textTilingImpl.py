@@ -28,6 +28,7 @@ stdout_handler.setFormatter(formatter)
 logger.addHandler(stdout_handler)
 print("okay2", file=sys.stderr)
 
+
 def read_csv(file_name):
     print(file_name)
     sentences = []
@@ -363,10 +364,14 @@ if __name__ == "__main__":
         logger.info(f"Folder: {args.folder}")
 
     if args.folder:
-        pathlist = Path(args.folder).rglob('*.csv')
+        sentences = []
+        labels = []
+        pathlist = Path(args.folder).rglob('*.tsv')
         for path in pathlist:
             path_in_str = str(path)
             sentences, labels = read_csv(path_in_str)
+            sentences.append(sentences)
+            labels.append(labels)
     if args.file:
         sentences, labels = read_csv(args.file)
 
