@@ -30,7 +30,6 @@ print("okay2", file=sys.stderr)
 
 
 def read_csv(file_name):
-    print(file_name)
     sentences = []
     labels = []
 
@@ -51,6 +50,7 @@ def read_csv(file_name):
             )
             sentences.append(sentence_stripped)
 
+    print(file_name, len(sentences))
     return sentences, labels
 
 
@@ -272,6 +272,7 @@ def score_embedding_similarity_blocked(sentence_list, model, block_size = 2):
 
     return embedding_gap_scores
 
+
 def boundary_identification(lexical_gap_scores):
     depth_scores = []
 
@@ -369,9 +370,9 @@ if __name__ == "__main__":
         pathlist = Path(args.folder).rglob('*.tsv')
         for path in pathlist:
             path_in_str = str(path)
-            sentences, labels = read_csv(path_in_str)
-            sentences.append(sentences)
-            labels.append(labels)
+            file_sentences, file_labels = read_csv(path_in_str)
+            sentences = sentences + file_sentences
+            labels = labels + file_labels
     if args.file:
         sentences, labels = read_csv(args.file)
 
@@ -416,7 +417,6 @@ if __name__ == "__main__":
         label_string = ''.join(labels)
         print("Gold Tiles:", label_string)
         print("Windowdiff Score:", windowdiff(labels, windowdiff_tiles, 3))
-    
 
     print(f"OUTPUT: {windowdiff_tiles}")
     if args.print:
