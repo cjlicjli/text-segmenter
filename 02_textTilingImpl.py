@@ -14,7 +14,7 @@ from nltk.metrics import windowdiff
 from nltk.corpus import stopwords
 from nltk.stem import SnowballStemmer
 from nltk.stem import WordNetLemmatizer
-# from sentence_transformers import SentenceTransformer, util
+from sentence_transformers import SentenceTransformer, util
 nltk.download("stopwords")
 print("okay0", file=sys.stderr)
 logger = logging.getLogger()
