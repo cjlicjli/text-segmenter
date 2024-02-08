@@ -33,12 +33,13 @@ def read_csv(file_name):
 
     with open(f"./{file_name}", "r") as f:
         data = []
-        reader = csv.reader(f)
+        reader = csv.reader(f, delimiter="\t")
         for line in reader:
             data.append(line)
         for line in data:
-            if len(line) == 2:
-                sentence, label = line
+            if len(line) >= 2:
+                sentence = line[0]
+                label = line[1]
                 labels.append(label)
             else:
                 sentence = line[0]
