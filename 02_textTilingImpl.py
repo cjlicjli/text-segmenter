@@ -6,6 +6,7 @@ import statistics
 import string
 import csv
 import numpy as np
+from pathlib import Path
 
 from collections import Counter
 import nltk
@@ -13,7 +14,7 @@ from nltk.metrics import windowdiff
 from nltk.corpus import stopwords
 from nltk.stem import SnowballStemmer
 from nltk.stem import WordNetLemmatizer
-from sentence_transformers import SentenceTransformer, util
+# from sentence_transformers import SentenceTransformer, util
 nltk.download("stopwords")
 print("okay0", file=sys.stderr)
 logger = logging.getLogger()
@@ -26,6 +27,7 @@ stdout_handler.setLevel(logging.DEBUG)
 stdout_handler.setFormatter(formatter)
 logger.addHandler(stdout_handler)
 print("okay2", file=sys.stderr)
+
 
 def read_csv(file_name):
     sentences = []
@@ -49,6 +51,7 @@ def read_csv(file_name):
             )
             sentences.append(sentence_stripped)
 
+    print(file_name, len(sentences))
     return sentences, labels
 
 
@@ -270,6 +273,7 @@ def score_embedding_similarity_blocked(sentence_list, model, block_size = 2):
 
     return embedding_gap_scores
 
+
 def boundary_identification(lexical_gap_scores):
     depth_scores = []
 
@@ -332,7 +336,7 @@ def translate_gaps_to_sentences(scores):
 if __name__ == "__main__":
     print("Hello", file=sys.stderr)
     parser = argparse.ArgumentParser(description="argument parser for text tiling")
-    parser.add_argument("-f", "--file", required=True, help="file to parse, each line: sent, label")
+    parser.add_argument("-f", "--file", required=False, help="file to parse, each line: sent, label")
     parser.add_argument(
         "-sc", "--score", required=True, help="scoring type, `block` or `vocab` or `embedding`"
     )
@@ -351,13 +355,28 @@ if __name__ == "__main__":
         help="print output one line at a time for copy paste",
         action="store_true",
     )
+    parser.add_argument("--folder")
 
     parser.add_argument("-nb", "--num_blocks", help="number of blocks for lexical overlap score", default=2)
 
     args = parser.parse_args()
-    logger.info(f"Reading in file: {args.file}")
+    if args.file:
+        logger.info(f"Reading in file: {args.file}")
+    else:
+        logger.info(f"Folder: {args.folder}")
 
-    sentences, labels = read_csv(args.file)
+    if args.folder:
+        sentences = []
+        labels = []
+        pathlist = Path(args.folder).rglob('*.tsv')
+        for path in pathlist:
+            path_in_str = str(path)
+            file_sentences, file_labels = read_csv(path_in_str)
+            sentences = sentences + file_sentences
+            labels = labels + file_labels
+    if args.file:
+        sentences, labels = read_csv(args.file)
+
     logger.info(f"File length: {len(sentences)}")
 
     sentences = preprocess(sentences)
@@ -399,7 +418,6 @@ if __name__ == "__main__":
         label_string = ''.join(labels)
         print("Gold Tiles:", label_string)
         print("Windowdiff Score:", windowdiff(labels, windowdiff_tiles, 3))
-    
 
     print(f"OUTPUT: {windowdiff_tiles}")
     if args.print:
